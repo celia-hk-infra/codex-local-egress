@@ -302,12 +302,19 @@ devtunnel --version
 
 ## 3. 工具启动
 
-两个脚本放在本文同目录：[`local.sh`](local.sh)、[`remote.sh`](remote.sh)。使用时复制到下面的路径：
+把本仓库 clone 到自己选择的目录，再在该目录里启动。本地个人电脑和远程服务器各自选路径，不必放在家目录，也不必使用同一个路径。脚本按自身所在目录读写 `connection.env` 和日志。下面把 clone 出来的目录称为仓库目录。
 
-| 位置 | 文件 | 用途 |
+```bash
+git clone https://github.com/celia-hk-infra/codex-local-egress.git <你选择的路径>
+cd <你选择的路径>
+```
+
+仓库里的脚本是 [`local.sh`](local.sh) 和 [`remote.sh`](remote.sh)。
+
+| 位置 | 在仓库目录中执行 | 用途 |
 |---|---|---|
-| 本地个人电脑 | `~/codex-local-egress/local.sh` | 沿用连接配置，启动 GOST 和 `devtunnel host` |
-| 远程服务器 | `~/codex-local-egress/remote.sh` | 连接隧道、启动 Codex |
+| 本地个人电脑 | `./local.sh` | 沿用连接配置，启动 GOST 和 `devtunnel host` |
+| 远程服务器 | `./remote.sh` | 连接隧道、启动 Codex |
 
 启动顺序：
 
@@ -353,23 +360,17 @@ GitHub 账号换成 `devtunnel user login -g`。WSL 没有可用浏览器时，�
 
 ### 3.2 本地：生成配置并启动
 
-在本地个人电脑的 macOS 终端或 WSL 中执行：
+在本地个人电脑的 macOS 终端或 WSL 中，进入仓库目录后执行：
 
 ```bash
-mkdir -p ~/codex-local-egress
-chmod 700 ~/codex-local-egress
-```
-
-把同目录的 [`local.sh`](local.sh) 复制为 `~/codex-local-egress/local.sh`，赋予执行权限并启动：
-
-```bash
-chmod 700 ~/codex-local-egress/local.sh
-~/codex-local-egress/local.sh
+chmod 700 .
+chmod 700 local.sh
+./local.sh
 ```
 
 **保持这个本地终端运行。** `Ctrl+C` 会同时停止 GOST 和 `devtunnel host`。持久隧道会留下来，下次运行 `local.sh` 会继续 host 同一条隧道。
 
-已有可用的 `connection.env` 时，终端会写“已沿用连接配置”，远程不用再复制。还没有这个文件时，看到“把这一个文件复制到远程一次”后再复制。在此之前，远程 `remote.sh connect` 还不能使用这份配置。`remote.sh test` 成功之前，代理链路还不可用。
+已有可用的 `connection.env` 时，终端会写“已沿用连接配置”，远程不用再复制。还没有这个文件时，看到“把这一个文件复制到远程仓库目录一次”后再复制。在此之前，远程 `remote.sh connect` 还不能使用这份配置。`remote.sh test` 成功之前，代理链路还不可用。
 
 **以前那份临时隧道写出的 `connection.env` 不能复用。** 那种隧道在 `local.sh` 退出后就被删除了。换用现在的脚本后，第一次运行会发现旧隧道不存在，新建持久隧道并覆盖本地文件。把这个新文件再复制到远程一次即可。
 
@@ -383,14 +384,14 @@ TUNNEL_ID='host 输出中的 tunnel id'
 
 ### 3.3 远程：复制配置并连接
 
-在远程服务器创建目录，把同目录的 [`remote.sh`](remote.sh) 复制为 `~/codex-local-egress/remote.sh`。再把本地刚写好的 `connection.env` 复制到同一目录。两边不能直接传文件时，用自己的 Google Doc 中转：在本地打开 `connection.env`，把三行贴进文档；在远程新建 `~/codex-local-egress/connection.env`，把文档里的三行原样粘进去。
+在远程服务器把本仓库 clone 到自己选择的目录。再把本地刚写好的 `connection.env` 复制到远程仓库目录，文件名仍是 `connection.env`。两边不能直接传文件时，用自己的 Google Doc 中转：在本地打开 `connection.env`，把三行贴进文档；在远程仓库目录新建 `connection.env`，把文档里的三行原样粘进去。
 
 ```bash
-mkdir -p ~/codex-local-egress
-chmod 700 ~/codex-local-egress
-chmod 700 ~/codex-local-egress/remote.sh
-chmod 600 ~/codex-local-egress/connection.env
-~/codex-local-egress/remote.sh connect
+cd <远程仓库目录>
+chmod 700 .
+chmod 700 remote.sh
+chmod 600 connection.env
+./remote.sh connect
 ```
 
 成功时终端里会出现 `Forwarding from 127.0.0.1:<端口> to host port <端口>`。这个端口与配置文件里的 `PROXY_PORT` 相同。
@@ -401,10 +402,10 @@ chmod 600 ~/codex-local-egress/connection.env
 
 ### 3.4 远程：验证并启动 Codex
 
-在远程服务器另开一个终端：
+在远程服务器另开一个终端，进入同一个仓库目录：
 
 ```bash
-~/codex-local-egress/remote.sh test
+./remote.sh test
 ```
 
 成功时会返回通过本地个人电脑网络出口访问得到的公网 IP。
@@ -412,13 +413,13 @@ chmod 600 ~/codex-local-egress/connection.env
 随后启动 Codex：
 
 ```bash
-~/codex-local-egress/remote.sh codex
+./remote.sh codex
 ```
 
 `codex` 会先做同一次出口 IP 检查，再启动 Codex。参数可以直接透传：
 
 ```bash
-~/codex-local-egress/remote.sh codex --help
+./remote.sh codex --help
 ```
 
 若远程 `remote.sh test` 失败，先确认本地 `local.sh` 和远程 `remote.sh connect` 都还在运行。出口 IP 检查只能证明代理链路可用，还要再发起一次真实 Codex 请求，确认能够访问 OpenAI 服务。
@@ -514,9 +515,9 @@ logs/
 排查时查看：
 
 ```text
-本地：
-~/codex-local-egress/logs/gost.log
-~/codex-local-egress/logs/devtunnel-host.log
+本地仓库目录：
+logs/gost.log
+logs/devtunnel-host.log
 ```
 
 `devtunnel host` 的输出同时出现在本地终端和上面的日志里。`devtunnel connect` 的输出留在远程终端。

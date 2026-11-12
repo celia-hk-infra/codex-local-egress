@@ -328,20 +328,18 @@ else
       ;;
     create)
       echo "连接配置已写好：$CONFIG"
-      echo "把这一个文件复制到远程一次："
-      echo "  ~/codex-local-egress/connection.env"
+      echo "把这一个文件复制到远程仓库目录一次，文件名仍是 connection.env。"
       echo "之后重新运行 local.sh 会沿用同一份，不用再复制。"
       ;;
     replace)
       echo "原来的隧道已经不存在，旧的 connection.env 不能继续用。"
       echo "临时隧道会在上次 local.sh 退出后被删除；持久隧道连续 30 天没有活动也会被删除。"
       echo "已新建持久隧道，并覆盖：$CONFIG"
-      echo "请把这个新文件再复制到远程一次："
-      echo "  ~/codex-local-egress/connection.env"
+      echo "请把这个新文件再复制到远程仓库目录一次，文件名仍是 connection.env。"
       echo "之后就不用每次复制了。"
       ;;
   esac
-  echo "然后在远程执行：~/codex-local-egress/remote.sh connect"
+  echo "然后在远程仓库目录执行：./remote.sh connect"
   echo
 fi
 
