@@ -82,7 +82,8 @@ with socket.socket() as s:
     except OSError as exc:
         sys.stderr.write(
             f"远程端口已被占用：127.0.0.1:{port} ({exc})\n"
-            "停掉本地 local.sh 后重新运行，再把新的 connection.env 复制到远程。\n"
+            "connection.env 里的端口是固定的。请释放这个端口后重新执行 remote.sh connect。\n"
+            "若要换端口，删除本地和远程的 connection.env，重新运行 local.sh，再把新文件复制一次。\n"
         )
         sys.exit(1)
 PY

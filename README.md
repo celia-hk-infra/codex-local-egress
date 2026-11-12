@@ -46,12 +46,12 @@ devtunnel connect 的回环入口
 
 - **GOST 开启用户名和密码认证**。
 - GOST 与远程 `devtunnel connect` 都只使用 `127.0.0.1`。
-- 端口、代理密码和 tunnel id 由本地脚本写入同一个 `connection.env`，再把这个文件复制到远程。
+- 端口、代理密码和 tunnel id 由本地脚本写入同一个 `connection.env`。这份文件复制到远程一次后可以反复使用。
 - macOS 和 Windows WSL 共用一套 Bash 本地脚本。
 - 代理环境变量只设置给脚本启动的 `curl` 和 Codex，不修改全局环境。
-- 隧道由本地 `devtunnel host` 创建，使用登录账号的默认访问控制。远程 `devtunnel connect` 使用同一个账号。
+- 隧道由本地脚本创建为持久隧道，使用登录账号的默认访问控制。之后本地运行 `devtunnel host <tunnel-id>`。远程 `devtunnel connect` 使用同一个账号。
 
-仍需手动完成：把本地生成的 `connection.env` 复制到远程。两边终端不能直接传文件时，可以把文件内容贴到自己的 Google Doc，再到远程保存下来。
+仍需手动完成一次：把本地生成的 `connection.env` 复制到远程。两边终端不能直接传文件时，可以把文件内容贴到自己的 Google Doc，再到远程保存下来。同一条隧道还在时，不用再次复制。
 
 ---
 
@@ -306,7 +306,7 @@ devtunnel --version
 
 | 位置 | 文件 | 用途 |
 |---|---|---|
-| 本地个人电脑 | `~/codex-local-egress/local.sh` | 生成配置，启动 GOST 和 `devtunnel host` |
+| 本地个人电脑 | `~/codex-local-egress/local.sh` | 沿用连接配置，启动 GOST 和 `devtunnel host` |
 | 远程服务器 | `~/codex-local-egress/remote.sh` | 连接隧道、启动 Codex |
 
 启动顺序：
@@ -316,7 +316,7 @@ devtunnel --version
   ↓
 本地：local.sh
   ↓
-把本地 connection.env 复制到远程
+第一次：把 connection.env 复制到远程
   ↓
 远程：remote.sh connect
   ↓
@@ -367,9 +367,11 @@ chmod 700 ~/codex-local-egress/local.sh
 ~/codex-local-egress/local.sh
 ```
 
-**保持这个本地终端运行。** `Ctrl+C` 会同时停止 GOST 和 `devtunnel host`。host 未指定已有 tunnel id 时创建的是临时隧道，进程退出后服务会删除它。
+**保持这个本地终端运行。** `Ctrl+C` 会同时停止 GOST 和 `devtunnel host`。持久隧道会留下来，下次运行 `local.sh` 会继续 host 同一条隧道。
 
-看到“连接配置已写好”后，再复制文件。在此之前，远程 `remote.sh connect` 还不能使用这份配置。`remote.sh test` 成功之前，代理链路还不可用。
+已有可用的 `connection.env` 时，终端会写“已沿用连接配置”，远程不用再复制。还没有这个文件时，看到“把这一个文件复制到远程一次”后再复制。在此之前，远程 `remote.sh connect` 还不能使用这份配置。`remote.sh test` 成功之前，代理链路还不可用。
+
+**以前那份临时隧道写出的 `connection.env` 不能复用。** 那种隧道在 `local.sh` 退出后就被删除了。换用现在的脚本后，第一次运行会发现旧隧道不存在，新建持久隧道并覆盖本地文件。把这个新文件再复制到远程一次即可。
 
 配置文件结构如下，实际值以脚本写出的文件为准：
 
@@ -395,7 +397,7 @@ chmod 600 ~/codex-local-egress/connection.env
 
 **保持这个远程终端运行。** Codex 使用这里的 `127.0.0.1` 地址作为 HTTP 代理。
 
-若提示远程端口已被占用，停掉本地 `local.sh` 后重新运行。本地会写出新的 `connection.env`。再把新文件复制到远程，然后重新执行 `remote.sh connect`。
+若提示远程端口已被占用，先释放远程上的这个端口，再重新执行 `remote.sh connect`。只要两边的 `connection.env` 还是同一份，端口就不会变。
 
 ### 3.4 远程：验证并启动 Codex
 
@@ -426,12 +428,13 @@ chmod 600 ~/codex-local-egress/connection.env
 每次使用：
 
 1. 两端仍是第 3.1 节的同一个账号。登录失效时按提示重新登录。
-2. 本地运行 `local.sh`，直到它写出 `connection.env`。
-3. 把这一个文件复制到远程 `~/codex-local-egress/connection.env`。可以用自己的 Google Doc 中转三行内容。
-4. 远程运行 `remote.sh connect`。
-5. 远程运行 `remote.sh codex`。
+2. 本地运行 `local.sh`。已有可用的 `connection.env` 时，它会直接 host 原来的隧道。
+3. 远程运行 `remote.sh connect`。远程目录里已经有同一份 `connection.env` 时，不用再复制。
+4. 远程运行 `remote.sh codex`。
 
-**每次重新运行 `local.sh`，端口、密码和 tunnel id 都会重新生成。** 先停掉远程 `remote.sh connect`，再复制新的 `connection.env`，然后重新 connect。`local.sh` 退出后，这次 host 创建的临时隧道会被删除。
+只有两种情况才需要再把 `connection.env` 复制到远程：本地第一次写出这个文件，或者旧隧道已经不存在、脚本覆盖了新文件。终端会直接说明要不要复制。可以用自己的 Google Doc 中转这三行。
+
+持久隧道在 `local.sh` 退出后仍然保留。连续 30 天没有任何活动时，Dev Tunnels 会删除它。下次运行会新建隧道并覆盖 `connection.env`，这时需要再复制一次。
 
 结束使用时，在 `local.sh` 和 `remote.sh connect` 所在终端分别按 `Ctrl+C`。
 
@@ -455,7 +458,9 @@ GOST 使用它所在环境的直接网络出口。
 
 ### 4.3 自动端口选择的限制
 
-`local.sh` 选择的是**检查时可用**的本地回环端口，随后由 GOST 绑定。远程 `devtunnel connect` 稍后也要绑定这个端口号。选择完成到远程绑定之间，端口可能被其他进程占用。远程若提示地址已占用，按第 3.3 节重新生成配置并复制。
+`local.sh` 第一次会选择当时可用的本地回环端口，写入 `connection.env`，随后由 GOST 绑定。之后一直用这个端口。远程 `devtunnel connect` 也绑定这个端口号。选择完成到远程绑定之间，端口可能被其他进程占用。远程若提示地址已占用，先释放远程上的这个端口，再重新 connect。
+
+确实要换端口或密码时，先停掉两端，执行 `devtunnel delete <tunnel-id>`，再删除本地和远程的 `connection.env`，然后重新运行 `local.sh`，把新文件复制到远程一次。也可以用 `devtunnel list -l codex-local-egress` 找出这条隧道。
 
 最终以远程 `remote.sh test` 成功为准。
 
@@ -516,7 +521,7 @@ logs/
 
 `devtunnel host` 的输出同时出现在本地终端和上面的日志里。`devtunnel connect` 的输出留在远程终端。
 
-正常停止请使用 `Ctrl+C`。`local.sh` 退出时会停止 `devtunnel host`；未指定已有 tunnel id 的临时隧道会在 host 退出后被删除。进程被强制结束时，隧道可能留到过期。需要清理时，在已登录的终端执行 `devtunnel list`，再用 `devtunnel delete <tunnel-id>` 删除。
+正常停止请使用 `Ctrl+C`。`local.sh` 退出时会停止 `devtunnel host`，持久隧道仍保留。需要换一套连接配置，或清理不用的隧道时，在已登录的终端执行 `devtunnel list -l codex-local-egress`，再用 `devtunnel delete <tunnel-id>` 删除，然后删除对应的 `connection.env`。只删除 `connection.env` 不会删除云上的隧道；只删除隧道后，下次 `local.sh` 会新建一条并覆盖配置文件。
 
 如果直接关闭终端、强制杀死进程或机器崩溃，可能留下后台进程及锁目录。确认并停止残留进程后，再删除对应锁目录，不要直接删除锁后反复启动。
 
