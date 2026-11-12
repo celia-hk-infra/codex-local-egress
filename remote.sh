@@ -61,22 +61,16 @@ case "${1:-}" in
     exec devtunnel "$@"
     ;;
 
-  connect)
-    if [[ $# -ne 1 ]]; then
-      echo "用法：$0 connect" >&2
-      exit 1
-    fi
-
+  "")
     require devtunnel
     require python3
-    prepare_devtunnel
-    ensure_devtunnel_login
     load_config
+    ensure_devtunnel_login 1
 
     LOCK="$DIR/.connect.lock"
     if ! mkdir "$LOCK" 2>/dev/null; then
-      echo "已有 connect，或异常退出留下了锁：$LOCK" >&2
-      echo "确认旧进程已停止后，再删除此锁目录。" >&2
+      echo "已有远程连接，或异常退出留下了锁：$LOCK" >&2
+      echo "确认没有 remote.sh 仍在运行后，再删除此锁目录。" >&2
       exit 1
     fi
 
@@ -106,7 +100,7 @@ with socket.socket() as s:
     except OSError as exc:
         sys.stderr.write(
             f"远程端口已被占用：127.0.0.1:{port} ({exc})\n"
-            "connection.env 里的端口是固定的。请释放这个端口后重新执行 remote.sh connect。\n"
+            "connection.env 里的端口是固定的。请释放这个端口后重新执行 remote.sh。\n"
             "若要换端口，删除本地和远程的 connection.env，重新运行 local.sh，再把新文件复制一次。\n"
         )
         sys.exit(1)
@@ -149,7 +143,7 @@ with socket.socket() as s:
     except OSError:
         sys.stderr.write(
             f"远程 127.0.0.1:{port} 没有在监听。\n"
-            "请先保持 remote.sh connect 运行。\n"
+            "请先保持 remote.sh 运行。\n"
         )
         sys.exit(1)
 PY
@@ -179,7 +173,8 @@ PY
     ;;
 
   *)
-    echo "用法：$0 {connect|test|codex [Codex 参数...]}" >&2
+    echo "用法：$0" >&2
+    echo "      $0 {test|codex [Codex 参数...]}" >&2
     echo "      $0 devtunnel login [microsoft|github]" >&2
     exit 1
     ;;

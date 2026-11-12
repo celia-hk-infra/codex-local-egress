@@ -20,6 +20,19 @@ prepare_devtunnel() {
   export DEVTUNNELS_USER_STATE_DIR="$DEVTUNNEL_STATE"
 }
 
+login_is_missing() {
+  grep -Eq 'Not logged in|Login token expired|Previously logged in' <<<"$1"
+}
+
+# macOS 打开浏览器，其他系统使用设备码。
+browser_or_device_code() {
+  if [[ "$(uname -s)" == Darwin ]]; then
+    printf '%s\n' 0
+  else
+    printf '%s\n' 1
+  fi
+}
+
 select_provider() {
   local choice="${1:-}"
   if [[ -z "$choice" ]]; then
@@ -87,14 +100,20 @@ devtunnel_login() {
   show_rc=$?
   set -e
   printf '%s\n' "$status"
-  if [[ "$show_rc" -ne 0 ]] || grep -q "Not logged in" <<<"$status"; then
+  if [[ "$show_rc" -ne 0 ]] || login_is_missing "$status"; then
     echo "登录未完成。" >&2
     exit 1
   fi
 }
 
+# 已登录则跳过。未登录或登录过期时再登录。
+# devtunnel user login 本身不会跳过已有登录，所以先看 user show。
+# 第一个参数为 1 时使用设备码，为 0 时使用浏览器。
 ensure_devtunnel_login() {
-  local status show_rc
+  local device_code="$1"
+  local status show_rc provider
+
+  prepare_devtunnel
   set +e
   status="$(devtunnel user show 2>&1)"
   show_rc=$?
@@ -104,8 +123,11 @@ ensure_devtunnel_login() {
     printf '%s\n' "$status" >&2
     exit 1
   fi
-  if grep -q "Not logged in" <<<"$status"; then
-    echo "还没有登录。请先在这个仓库目录执行：$0 devtunnel login" >&2
-    exit 1
+  if login_is_missing "$status"; then
+    echo "尚未登录，或登录已过期。完成登录后会继续。"
+    provider="$(select_provider)" || exit 1
+    devtunnel_login "$provider" "$device_code"
+    return
   fi
+  printf '%s\n' "$status"
 }

@@ -26,11 +26,7 @@ case "${1:-}" in
         exit 1
       fi
       provider="$(select_provider "${1:-}")" || exit 1
-      if [[ "$(uname -s)" == Darwin ]]; then
-        devtunnel_login "$provider" 0
-      else
-        devtunnel_login "$provider" 1
-      fi
+      devtunnel_login "$provider" "$(browser_or_device_code)"
       exit 0
     fi
     if [[ $# -eq 0 ]]; then
@@ -46,6 +42,7 @@ case "${1:-}" in
   *)
     echo "用法：$0" >&2
     echo "      $0 devtunnel login [microsoft|github]" >&2
+    echo "      $0 devtunnel <其他参数>" >&2
     exit 1
     ;;
 esac
@@ -54,8 +51,7 @@ for cmd in gost devtunnel python3; do
   require "$cmd"
 done
 
-prepare_devtunnel
-ensure_devtunnel_login
+ensure_devtunnel_login "$(browser_or_device_code)"
 
 mkdir -p "$LOGS"
 chmod 700 "$LOGS"
@@ -63,7 +59,7 @@ chmod 700 "$LOGS"
 LOCK="$DIR/.local.lock"
 if ! mkdir "$LOCK" 2>/dev/null; then
   echo "已有本地服务，或异常退出留下了锁：$LOCK" >&2
-  echo "确认旧进程已停止后，再删除此锁目录。" >&2
+  echo "确认没有 local.sh 仍在运行后，再删除此锁目录。" >&2
   exit 1
 fi
 
@@ -379,7 +375,7 @@ else
       echo "之后就不用每次复制了。"
       ;;
   esac
-  echo "然后在远程仓库目录执行：./remote.sh connect"
+  echo "然后在远程仓库目录执行：./remote.sh"
   echo
 fi
 
