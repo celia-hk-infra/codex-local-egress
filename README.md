@@ -296,13 +296,13 @@ hash -r
 devtunnel --version
 ```
 
-这次不再手动加 `LD_LIBRARY_PATH`。能输出版本号后，按第 3.1 节登录。远程随后运行 `./remote.sh connect`。本地 WSL 若也使用这个包装脚本，随后由 `local.sh` 运行 host。
+包装脚本会自己带上 `LD_LIBRARY_PATH`。能输出版本号后，按第 3.1 节登录。远程随后运行 `./remote.sh connect`。本地 WSL 若也使用这个包装脚本，随后由 `local.sh` 运行 host。
 
 ---
 
 ## 3. 工具启动
 
-把本仓库 clone 到自己选择的目录，再在该目录里启动。本地个人电脑和远程服务器各自选路径，不必放在家目录，也不必使用同一个路径。脚本按自身所在目录读写下面这些路径。clone 出来的目录称为仓库目录。
+把本仓库 clone 到自己选择的目录，再在该目录里启动。本地个人电脑和远程服务器各自选路径，两边不必使用同一个路径。脚本按自身所在目录读写下面这些路径。clone 出来的目录称为仓库目录。
 
 ```bash
 git clone https://github.com/celia-hk-infra/codex-local-egress.git <你选择的路径>
@@ -330,7 +330,7 @@ cd <你选择的路径>
 | `.local.lock/` | 仅本地 | `./local.sh` 运行期间的锁 |
 | `.connect.lock/` | 仅远程 | `./remote.sh connect` 运行期间的锁 |
 
-`.connect.lock/` 只在 connect 运行时出现。若目录里还有以前的 `.state/`，那是旧的连接锁位置；确认没有 connect 在跑之后可以删掉。
+`.connect.lock/` 只在 connect 运行时出现。
 
 启动顺序：
 
@@ -386,8 +386,6 @@ chmod 700 local.sh
 **保持这个本地终端运行。** `Ctrl+C` 会同时停止 GOST 和 `devtunnel host`。持久隧道会留下来，下次运行 `local.sh` 会继续 host 同一条隧道。
 
 已有可用的 `connection.env` 时，终端会写“已沿用连接配置”，远程不用再复制。还没有这个文件时，看到“把这一个文件复制到远程仓库目录一次”后再复制。在此之前，远程 `remote.sh connect` 还不能使用这份配置。`remote.sh test` 成功之前，代理链路还不可用。
-
-**以前那份临时隧道写出的 `connection.env` 不能复用。** 那种隧道在 `local.sh` 退出后就被删除了。换用现在的脚本后，第一次运行会发现旧隧道不存在，新建持久隧道并覆盖本地文件。把这个新文件再复制到远程一次即可。
 
 配置文件结构如下，实际值以脚本写出的文件为准：
 
@@ -448,7 +446,7 @@ chmod 600 connection.env
 3. 远程运行 `remote.sh connect`。远程目录里已经有同一份 `connection.env` 时，不用再复制。
 4. 远程运行 `remote.sh codex`。
 
-只有两种情况才需要再把 `connection.env` 复制到远程：本地第一次写出这个文件，或者旧隧道已经不存在、脚本覆盖了新文件。终端会直接说明要不要复制。可以用自己的 Google Doc 中转这三行。
+只有两种情况才需要再把 `connection.env` 复制到远程：本地第一次写出这个文件，或者隧道已经不存在、脚本写出了新文件。终端会直接说明要不要复制。可以用自己的 Google Doc 中转这三行。
 
 持久隧道在 `local.sh` 退出后仍然保留。连续 30 天没有任何活动时，Dev Tunnels 会删除它。下次运行会新建隧道并覆盖 `connection.env`，这时需要再复制一次。
 

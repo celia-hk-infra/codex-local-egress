@@ -205,7 +205,7 @@ PROXY_AUTH=""
 TUNNEL_ID=""
 
 if [[ -s "$CONFIG" ]]; then
-  # 仅加载本脚本以前写出的连接配置。
+  # 仅加载本脚本写出的连接配置。
   # shellcheck disable=SC1090
   source "$CONFIG"
   if ! config_valid; then
@@ -372,8 +372,8 @@ else
       echo "之后重新运行 local.sh 会沿用同一份，不用再复制。"
       ;;
     replace)
-      echo "原来的隧道已经不存在，旧的 connection.env 不能继续用。"
-      echo "临时隧道会在上次 local.sh 退出后被删除；持久隧道连续 30 天没有活动也会被删除。"
+      echo "原来的隧道已经不存在，这份 connection.env 不能继续用。"
+      echo "持久隧道连续 30 天没有活动会被删除。"
       echo "已新建持久隧道，并覆盖：$CONFIG"
       echo "请把这个新文件再复制到远程仓库目录一次，文件名仍是 connection.env。"
       echo "之后就不用每次复制了。"
