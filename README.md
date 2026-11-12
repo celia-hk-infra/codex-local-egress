@@ -49,7 +49,7 @@ devtunnel connect 的回环入口
 - 端口、代理密码和 tunnel id 由本地脚本写入同一个 `connection.env`。这份文件复制到远程一次后可以反复使用。
 - macOS 和 Windows WSL 共用一套 Bash 本地脚本。
 - 代理环境变量只设置给脚本启动的 `curl` 和 Codex，不修改全局环境。
-- 隧道由本地脚本创建为持久隧道，使用登录账号的默认访问控制。之后本地运行 `devtunnel host <tunnel-id>`。远程 `devtunnel connect` 使用同一个账号。
+- 隧道由本地脚本创建为持久隧道，使用登录账号的默认访问控制。`local.sh` 执行 `devtunnel host`，`remote.sh connect` 执行 `devtunnel connect`。两端登录同一个账号，令牌在各自仓库目录的 `.devtunnel/`。
 
 仍需手动完成一次：把本地生成的 `connection.env` 复制到远程。两边终端不能直接传文件时，可以把文件内容贴到自己的 Google Doc，再到远程保存下来。同一条隧道还在时，不用再次复制。
 
@@ -296,30 +296,46 @@ hash -r
 devtunnel --version
 ```
 
-这次不再手动加 `LD_LIBRARY_PATH`。能输出版本号后即可登录。远程服务器上随后运行 `devtunnel connect`。本地 WSL 若也使用这个包装脚本，随后由 `local.sh` 运行 `devtunnel host`。
+这次不再手动加 `LD_LIBRARY_PATH`。能输出版本号后，按第 3.1 节登录。远程随后运行 `./remote.sh connect`。本地 WSL 若也使用这个包装脚本，随后由 `local.sh` 运行 host。
 
 ---
 
 ## 3. 工具启动
 
-把本仓库 clone 到自己选择的目录，再在该目录里启动。本地个人电脑和远程服务器各自选路径，不必放在家目录，也不必使用同一个路径。脚本按自身所在目录读写 `connection.env` 和日志。下面把 clone 出来的目录称为仓库目录。
+把本仓库 clone 到自己选择的目录，再在该目录里启动。本地个人电脑和远程服务器各自选路径，不必放在家目录，也不必使用同一个路径。脚本按自身所在目录读写下面这些路径。clone 出来的目录称为仓库目录。
 
 ```bash
 git clone https://github.com/celia-hk-infra/codex-local-egress.git <你选择的路径>
 cd <你选择的路径>
 ```
 
-仓库里的脚本是 [`local.sh`](local.sh) 和 [`remote.sh`](remote.sh)。
+仓库里直接执行的是 [`local.sh`](local.sh) 和 [`remote.sh`](remote.sh)。两者加载同目录的 [`devtunnel-auth.sh`](devtunnel-auth.sh)，这个文件不要单独执行。
 
-| 位置 | 在仓库目录中执行 | 用途 |
+| 命令 | 作用 |
+|---|---|
+| `./local.sh devtunnel login` | 本地登录 |
+| `./local.sh` | 沿用连接配置，启动 GOST 和 `devtunnel host` |
+| `./remote.sh devtunnel login` | 远程登录 |
+| `./remote.sh connect` | 连接隧道 |
+| `./remote.sh test` | 检查出口 IP |
+| `./remote.sh codex` | 检查出口 IP 后启动 Codex |
+
+脚本在仓库目录里读写这些路径：
+
+| 路径 | 哪一端 | 内容 |
 |---|---|---|
-| 本地个人电脑 | `./local.sh` | 沿用连接配置，启动 GOST 和 `devtunnel host` |
-| 远程服务器 | `./remote.sh` | 连接隧道、启动 Codex |
+| `connection.env` | 两端。本地写出，复制到远程一次 | 端口、代理密码、tunnel id |
+| `.devtunnel/` | 两端各自一份 | 登录令牌。不复制到另一台机器，不提交 |
+| `logs/` | 仅本地 | `gost.log`、`devtunnel-host.log` |
+| `.local.lock/` | 仅本地 | `./local.sh` 运行期间的锁 |
+| `.connect.lock/` | 仅远程 | `./remote.sh connect` 运行期间的锁 |
+
+`.connect.lock/` 只在 connect 运行时出现。若目录里还有以前的 `.state/`，那是旧的连接锁位置；确认没有 connect 在跑之后可以删掉。
 
 启动顺序：
 
 ```text
-两端：devtunnel user login（同一账号，只需一次）
+两端：./local.sh devtunnel login 与 ./remote.sh devtunnel login（同一账号，两边各只需一次）
   ↓
 本地：local.sh
   ↓
@@ -334,29 +350,28 @@ cd <你选择的路径>
 
 ### 3.1 两端登录
 
-远程和本地登录**同一个** Microsoft 或 GitHub 账号。
+远程和本地登录**同一个** Microsoft 或 GitHub 账号。账号令牌写在各自仓库目录的 `.devtunnel/`。
 
-远程服务器通常没有浏览器，使用设备码登录。Microsoft 账号：
-
-```bash
-devtunnel user login -d
-```
-
-GitHub 账号：
+在本地仓库目录：
 
 ```bash
-devtunnel user login -g -d
+./local.sh devtunnel login
 ```
 
-终端会给出一个网址和代码。在本地个人电脑的浏览器中打开该网址并完成登录。登录会返回到 shell，状态会保留一段时间；之后若提示未登录或授权失败，用同一方式重新登录。
-
-本地 macOS 可以使用：
+在远程仓库目录：
 
 ```bash
-devtunnel user login
+./remote.sh devtunnel login
 ```
 
-GitHub 账号换成 `devtunnel user login -g`。WSL 没有可用浏览器时，同样加上 `-d`。
+脚本会请你选择 Microsoft 或 GitHub。也可以直接写在命令里：
+
+```bash
+./local.sh devtunnel login microsoft
+./remote.sh devtunnel login github
+```
+
+远程没有浏览器，`remote.sh` 使用设备码：终端给出网址和代码，在有浏览器的电脑上打开并完成登录。本地 macOS 会打开浏览器。本地 WSL 或 Linux 同样使用设备码。
 
 ### 3.2 本地：生成配置并启动
 
@@ -428,7 +443,7 @@ chmod 600 connection.env
 
 每次使用：
 
-1. 两端仍是第 3.1 节的同一个账号。登录失效时按提示重新登录。
+1. 两端仍是第 3.1 节的同一个账号。登录失效时重新执行 `./local.sh devtunnel login` 或 `./remote.sh devtunnel login`。
 2. 本地运行 `local.sh`。已有可用的 `connection.env` 时，它会直接 host 原来的隧道。
 3. 远程运行 `remote.sh connect`。远程目录里已经有同一份 `connection.env` 时，不用再复制。
 4. 远程运行 `remote.sh codex`。
@@ -461,7 +476,7 @@ GOST 使用它所在环境的直接网络出口。
 
 `local.sh` 第一次会选择当时可用的本地回环端口，写入 `connection.env`，随后由 GOST 绑定。之后一直用这个端口。远程 `devtunnel connect` 也绑定这个端口号。选择完成到远程绑定之间，端口可能被其他进程占用。远程若提示地址已占用，先释放远程上的这个端口，再重新 connect。
 
-确实要换端口或密码时，先停掉两端，执行 `devtunnel delete <tunnel-id>`，再删除本地和远程的 `connection.env`，然后重新运行 `local.sh`，把新文件复制到远程一次。也可以用 `devtunnel list -l codex-local-egress` 找出这条隧道。
+确实要换端口或密码时，先停掉两端，在本地仓库目录执行 `./local.sh devtunnel delete <tunnel-id>`，再删除本地和远程的 `connection.env`，然后重新运行 `local.sh`，把新文件复制到远程一次。也可以用 `./local.sh devtunnel list -l codex-local-egress` 找出这条隧道。这两条命令使用 `.devtunnel/` 里的登录。直接运行 `devtunnel delete` 或 `devtunnel list` 看不到这份登录。
 
 最终以远程 `remote.sh test` 成功为准。
 
@@ -470,7 +485,7 @@ GOST 使用它所在环境的直接网络出口。
 本方案同时使用：
 
 - GOST 用户名和密码。
-- Dev Tunnel 的登录访问控制。本地 `devtunnel host` 与远程 `devtunnel connect` 使用同一个账号。
+- Dev Tunnel 的登录访问控制。本地 `devtunnel host` 与远程 `devtunnel connect` 使用同一个账号，登录缓存在各自仓库目录的 `.devtunnel/`。
 
 **回环监听不等于隔离同一服务器上的其他用户。** `devtunnel connect` 在远程监听 `127.0.0.1` 期间，这台服务器上的其他用户也可能连到该端口。GOST 密码用于阻止他们直接借用代理。
 
@@ -490,15 +505,6 @@ Dev Tunnels 中继把两端的端口转发通道接在一起。GOST 的用户名
 - 本地 GOST 的命令行含有代理密码。这台电脑默认只有自己使用。
 
 此方案不能防御已控制远程服务器、本地个人电脑或 Dev Tunnels 中继的管理员。
-
-建议将以下内容加入 `.gitignore`：
-
-```gitignore
-connection.env
-.state/
-logs/
-.local.lock/
-```
 
 ### 4.5 Codex CLI 的代理范围
 
@@ -522,9 +528,9 @@ logs/devtunnel-host.log
 
 `devtunnel host` 的输出同时出现在本地终端和上面的日志里。`devtunnel connect` 的输出留在远程终端。
 
-正常停止请使用 `Ctrl+C`。`local.sh` 退出时会停止 `devtunnel host`，持久隧道仍保留。需要换一套连接配置，或清理不用的隧道时，在已登录的终端执行 `devtunnel list -l codex-local-egress`，再用 `devtunnel delete <tunnel-id>` 删除，然后删除对应的 `connection.env`。只删除 `connection.env` 不会删除云上的隧道；只删除隧道后，下次 `local.sh` 会新建一条并覆盖配置文件。
+正常停止请使用 `Ctrl+C`。`local.sh` 退出时会停止 `devtunnel host`，持久隧道仍保留。换端口、密码或删除隧道见第 4.3 节。只删除 `connection.env` 不会删除云上的隧道；只删除隧道后，下次 `local.sh` 会新建一条并覆盖配置文件。
 
-如果直接关闭终端、强制杀死进程或机器崩溃，可能留下后台进程及锁目录。确认并停止残留进程后，再删除对应锁目录，不要直接删除锁后反复启动。
+如果直接关闭终端、强制杀死进程或机器崩溃，可能留下后台进程及锁目录。本地锁是 `.local.lock/`，远程连接锁是 `.connect.lock/`。确认并停止残留进程后，再删除对应锁目录，不要直接删除锁后反复启动。
 
 使用期间，本地个人电脑必须在线且不能休眠。
 

@@ -13,9 +13,49 @@ require() {
   }
 }
 
+# shellcheck source=devtunnel-auth.sh
+source "$DIR/devtunnel-auth.sh"
+
+case "${1:-}" in
+  devtunnel)
+    shift
+    if [[ "${1:-}" == login ]]; then
+      shift
+      if [[ $# -gt 1 ]]; then
+        echo "用法：$0 devtunnel login [microsoft|github]" >&2
+        exit 1
+      fi
+      provider="$(select_provider "${1:-}")" || exit 1
+      if [[ "$(uname -s)" == Darwin ]]; then
+        devtunnel_login "$provider" 0
+      else
+        devtunnel_login "$provider" 1
+      fi
+      exit 0
+    fi
+    if [[ $# -eq 0 ]]; then
+      echo "用法：$0 devtunnel login [microsoft|github]" >&2
+      echo "      $0 devtunnel <devtunnel 的其他参数>" >&2
+      exit 1
+    fi
+    prepare_devtunnel
+    exec devtunnel "$@"
+    ;;
+  "")
+    ;;
+  *)
+    echo "用法：$0" >&2
+    echo "      $0 devtunnel login [microsoft|github]" >&2
+    exit 1
+    ;;
+esac
+
 for cmd in gost devtunnel python3; do
   require "$cmd"
 done
+
+prepare_devtunnel
+ensure_devtunnel_login
 
 mkdir -p "$LOGS"
 chmod 700 "$LOGS"

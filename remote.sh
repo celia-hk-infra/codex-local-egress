@@ -4,9 +4,6 @@ umask 077
 
 DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 CONFIG="$DIR/connection.env"
-STATE="$DIR/.state"
-mkdir -p "$STATE"
-chmod 700 "$STATE"
 
 require() {
   command -v "$1" >/dev/null || {
@@ -14,6 +11,9 @@ require() {
     exit 1
   }
 }
+
+# shellcheck source=devtunnel-auth.sh
+source "$DIR/devtunnel-auth.sh"
 
 load_config() {
   [[ -s "$CONFIG" ]] || {
@@ -39,6 +39,28 @@ load_config() {
 }
 
 case "${1:-}" in
+  devtunnel)
+    shift
+    if [[ "${1:-}" == login ]]; then
+      shift
+      if [[ $# -gt 1 ]]; then
+        echo "用法：$0 devtunnel login [microsoft|github]" >&2
+        exit 1
+      fi
+      provider="$(select_provider "${1:-}")" || exit 1
+      # 远程没有浏览器，固定使用设备码。
+      devtunnel_login "$provider" 1
+      exit 0
+    fi
+    if [[ $# -eq 0 ]]; then
+      echo "用法：$0 devtunnel login [microsoft|github]" >&2
+      echo "      $0 devtunnel <devtunnel 的其他参数>" >&2
+      exit 1
+    fi
+    prepare_devtunnel
+    exec devtunnel "$@"
+    ;;
+
   connect)
     if [[ $# -ne 1 ]]; then
       echo "用法：$0 connect" >&2
@@ -47,9 +69,11 @@ case "${1:-}" in
 
     require devtunnel
     require python3
+    prepare_devtunnel
+    ensure_devtunnel_login
     load_config
 
-    LOCK="$STATE/connect.lock"
+    LOCK="$DIR/.connect.lock"
     if ! mkdir "$LOCK" 2>/dev/null; then
       echo "已有 connect，或异常退出留下了锁：$LOCK" >&2
       echo "确认旧进程已停止后，再删除此锁目录。" >&2
@@ -156,6 +180,7 @@ PY
 
   *)
     echo "用法：$0 {connect|test|codex [Codex 参数...]}" >&2
+    echo "      $0 devtunnel login [microsoft|github]" >&2
     exit 1
     ;;
 esac

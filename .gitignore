@@ -1,7 +1,10 @@
 # 本地脚本生成的连接配置，含代理密码和 tunnel id
 connection.env
 
-# 运行时日志、锁和远程状态
+# 两端各自的 devtunnel 登录令牌
+.devtunnel/
+
+# 本地日志，以及两端运行期间的锁
 logs/
-.local.lock
-.state/
+.local.lock/
+.connect.lock/
