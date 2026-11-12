@@ -111,16 +111,42 @@ GOST 使用 v3。
 - curl
 - Codex CLI
 
-`devtunnel` 和 `codex` 由用户自行安装，并且都已经可以在当前 `PATH` 中直接运行。`remote.sh` 不修改 `PATH`，直接调用这两个命令。
+`codex` 由用户自行安装。`devtunnel` 下载官方 Linux 二进制，直链来自[官方 Linux 说明](https://learn.microsoft.com/en-us/azure/developer/dev-tunnels/get-started?tabs=linux)。
 
-检查：
+文件名必须是 `devtunnel`，所在目录必须已经在当前 shell 的 `PATH` 里。当前 shell 要能直接运行命令名 `devtunnel`。`remote.sh` 不修改 `PATH`，直接调用这个命令。
+
+下面放到 `~/.local/bin`。先看这个目录是否已在当前 `PATH` 中：
 
 ```bash
+echo "$PATH" | tr ':' '\n' | grep -Fx "$HOME/.local/bin" || true
+```
+
+没有输出时，先把 `~/.local/bin` 加入用来启动 `remote.sh` 的 shell 的 `PATH`，或把下面的 `-o` 改成 `echo "$PATH"` 里已有、且本人可写的目录。文件名仍是 `devtunnel`。
+
+`uname -m` 为 `x86_64` 时：
+
+```bash
+mkdir -p "$HOME/.local/bin"
+curl -fL --retry 3 \
+  'https://aka.ms/TunnelsCliDownload/linux-x64' \
+  -o "$HOME/.local/bin/devtunnel"
+chmod 755 "$HOME/.local/bin/devtunnel"
+hash -r
+```
+
+`uname -m` 为 `aarch64` 或 `arm64` 时，URL 换成 `https://aka.ms/TunnelsCliDownload/linux-arm64`，保存路径和权限相同。
+
+确认当前 `PATH` 找到的就是这份文件：
+
+```bash
+command -v devtunnel
 devtunnel --version
 python3 --version
 curl --version
 codex --version
 ```
+
+`command -v devtunnel` 应输出刚才写入的绝对路径。没有输出，或输出的是其他路径时，先把文件放到当前 `PATH` 中的目录，再继续。
 
 `devtunnel --version` 若报错 `Couldn't find a valid ICU package installed on the system`，先完成第 2.4 节，再重新检查。
 
