@@ -432,6 +432,8 @@ chmod 600 connection.env
 
 成功时会返回通过本地个人电脑网络出口访问得到的公网 IP。
 
+内置的 `test` 不接受额外参数；若要执行系统的 `test` 命令，请使用 `./remote.sh -- test [参数...]`。
+
 随后启动 Codex：
 
 ```bash

@@ -130,6 +130,10 @@ PY
       test)
         MODE=test
         shift
+        if [[ $# -ne 0 ]]; then
+          echo "用法：$0 test（不接受参数；执行外部 test 命令请使用 -- test）" >&2
+          exit 1
+        fi
         ;;
       --)
         shift

@@ -54,6 +54,18 @@ class RemoteTests(unittest.TestCase):
                 self.assertEqual(result.returncode, 0, result.stderr)
                 self.assertEqual(target.stat().st_mode & 0o777, expected)
 
+    def test_test_mode_rejects_extra_arguments_before_preflight(self):
+        result = self.run_remote('test', 'curl', 'https://example.com', CURL_STATUS='22')
+        self.assertEqual(result.returncode, 1)
+        self.assertIn('-- test', result.stderr)
+        self.assertEqual(result.stdout, '')
+
+    def test_separator_allows_external_test_command(self):
+        result = self.run_remote('--', '/bin/test', '-n', 'hello')
+        self.assertEqual(result.returncode, 0, result.stderr)
+        result = self.run_remote('--', 'test', '-n', '')
+        self.assertEqual(result.returncode, 1, result.stderr)
+
     def test_failed_preflight_prevents_execution(self):
         for env, expected in (({'PROBE_STATUS': '1'}, 1), ({'CURL_STATUS': '22'}, 22)):
             with self.subTest(env=env):
