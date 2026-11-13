@@ -528,9 +528,9 @@ Dev Tunnels 中继把两端的端口转发通道接在一起。GOST 的用户名
 
 此方案不能防御已控制远程服务器、本地个人电脑或 Dev Tunnels 中继的管理员。
 
-### 4.5 Codex CLI 的代理范围
+### 4.5 代理范围
 
-本指南针对 **Codex CLI**：
+`remote.sh` 可以为 Codex CLI 或其他命令配置代理：
 
 - 代理变量仅传给脚本启动的命令（包括 Codex）及其子进程，不修改全局 Shell 环境。
 - `HTTPS_PROXY` 的值使用 `http://`。HTTPS 请求通过 HTTP CONNECT 转发。
