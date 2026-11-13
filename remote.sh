@@ -170,16 +170,21 @@ PY
     export no_proxy="$NO_PROXY"
     unset ALL_PROXY all_proxy
 
-    # curl 从上面的环境变量读取代理，不把代理密码放到命令行参数中。
-    echo "验证代理链路，出口 IP："
-    curl --fail --show-error --silent \
-      --connect-timeout 10 \
-      --max-time 30 \
-      https://api.ipify.org
-    echo
+    verify_proxy() {
+      # curl 从环境变量读取代理，不把代理密码放到命令行参数中。
+      echo "验证代理链路，出口 IP："
+      curl --fail --show-error --silent \
+        --connect-timeout 10 \
+        --max-time 30 \
+        https://api.ipify.org
+      echo
+    }
 
     if [[ "$MODE" == command ]]; then
+      verify_proxy >&2
       exec "$@"
+    else
+      verify_proxy
     fi
     ;;
 esac
