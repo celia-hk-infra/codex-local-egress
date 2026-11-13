@@ -104,7 +104,26 @@ GOST 使用 v3。
 
 ### 2.3 远程服务器：Linux
 
-远程服务器需要：
+克隆本仓库后，可直接运行安装脚本（Linux / WSL，支持 x86_64 和 ARM64，无需 sudo）：
+
+```bash
+bash install_dev_tunnel.sh
+```
+
+脚本从 Microsoft 官方地址下载到 `~/.local/bin/devtunnel`，先验证 `--version` 再替换已有文件；下载或运行失败时保留原安装。`local.sh` / `remote.sh` 会在 PATH 没有 devtunnel 时自动查找此位置，无需修改 shell 配置。若缺少 ICU，脚本会提示参考第 2.4 节，不自动修改系统库。
+
+此脚本只安装 devtunnel，不安装 Codex 或 GOST，不自动登录，也不复制含密码的 `connection.env`。安装后复制自己的连接配置，再运行：
+
+```bash
+chmod 600 connection.env
+bash remote.sh devtunnel login github  # 两端使用同一个 GitHub 账号
+bash remote.sh                       # 保持运行
+# 在另一个终端进入同一仓库目录：
+bash remote.sh test
+bash remote.sh codex
+```
+
+以下为手动安装方法。远程服务器需要：
 
 - devtunnel
 - Python 3
@@ -113,7 +132,7 @@ GOST 使用 v3。
 
 `codex` 由用户自行安装。`devtunnel` 下载官方 Linux 二进制，直链来自[官方 Linux 说明](https://learn.microsoft.com/en-us/azure/developer/dev-tunnels/get-started?tabs=linux)。
 
-文件名必须是 `devtunnel`，所在目录必须已经在当前 shell 的 `PATH` 里。当前 shell 要能直接运行命令名 `devtunnel`。`remote.sh` 不修改 `PATH`，直接调用这个命令。
+手动安装时，文件名必须是 `devtunnel`。`remote.sh` 优先使用当前 `PATH` 中的命令；找不到时，会仅在脚本进程中把含有可执行 devtunnel 的 `~/.local/bin` 加入 PATH，不修改父 shell 或 shell 配置文件。
 
 下面放到 `~/.local/bin`。先看这个目录是否已在当前 `PATH` 中：
 

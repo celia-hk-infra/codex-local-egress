@@ -6,6 +6,11 @@ if [[ "${BASH_SOURCE[0]}" == "$0" ]]; then
 fi
 
 : "${DIR:?}"
+# The installer uses ~/.local/bin; do not edit the user's shell startup files.
+# Preserve an existing PATH entry (including an ICU wrapper) if one is available.
+if ! command -v devtunnel >/dev/null 2>&1 && [[ -x "$HOME/.local/bin/devtunnel" ]]; then
+  export PATH="$HOME/.local/bin:$PATH"
+fi
 DEVTUNNEL_STATE="$DIR/.devtunnel"
 
 chmod_devtunnel_state() {
