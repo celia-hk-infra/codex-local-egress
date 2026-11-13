@@ -123,13 +123,25 @@ PY
     exit 1
     ;;
 
-  test|codex)
+  *)
+    MODE=command
+    case "$1" in
+      test)
+        MODE=test
+        shift
+        ;;
+      --)
+        shift
+        if [[ $# -eq 0 ]]; then
+          echo "用法：$0 -- <命令> [参数...]" >&2
+          exit 1
+        fi
+        ;;
+    esac
+
     require curl
     require python3
     load_config
-
-    MODE="$1"
-    shift
 
     python3 - "$PROXY_PORT" <<'PY'
 import socket
@@ -166,16 +178,8 @@ PY
       https://api.ipify.org
     echo
 
-    if [[ "$MODE" == codex ]]; then
-      require codex
-      exec codex "$@"
+    if [[ "$MODE" == command ]]; then
+      exec "$@"
     fi
-    ;;
-
-  *)
-    echo "用法：$0" >&2
-    echo "      $0 {test|codex [Codex 参数...]}" >&2
-    echo "      $0 devtunnel login [microsoft|github]" >&2
-    exit 1
     ;;
 esac

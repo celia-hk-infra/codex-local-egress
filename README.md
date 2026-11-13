@@ -48,7 +48,7 @@ devtunnel connect 的回环入口
 - GOST 与远程 `devtunnel connect` 都只使用 `127.0.0.1`。
 - 端口、代理密码和 tunnel id 由本地脚本写入同一个 `connection.env`。这份文件复制到远程一次后可以反复使用。
 - macOS 和 Windows WSL 共用一套 Bash 本地脚本。
-- 代理环境变量只设置给脚本启动的 `curl` 和 Codex，不修改全局环境。
+- 代理环境变量只设置给脚本启动的 `curl`、用户指定的命令及其子进程，不修改全局环境。
 - 隧道由本地脚本创建为持久隧道，使用登录账号的默认访问控制。`local.sh` 执行 `devtunnel host`，`remote.sh` 执行 `devtunnel connect`。两端登录同一个账号，令牌在各自仓库目录的 `.devtunnel/`。尚未登录或登录过期时，这两个命令会先登录。
 
 仍需手动完成一次：把本地生成的 `connection.env` 复制到远程。两边终端不能直接传文件时，可以把文件内容贴到自己的 Google Doc，再到远程保存下来。同一条隧道还在时，不用再次复制。
@@ -340,6 +340,8 @@ cd <你选择的路径>
 | `./remote.sh` | 需要时登录，然后连接隧道 |
 | `./remote.sh test` | 检查出口 IP |
 | `./remote.sh codex` | 检查出口 IP 后启动 Codex |
+| `./remote.sh <命令> [参数...]` | 检查出口 IP 后，带代理环境变量执行指定命令 |
+| `./remote.sh -- <命令> [参数...]` | 同上；`--` 可避免命令名与 `test`、`devtunnel` 等内置命令冲突 |
 
 脚本在仓库目录里读写这些路径：
 
@@ -420,7 +422,7 @@ chmod 600 connection.env
 
 若提示远程端口已被占用，先释放远程上的这个端口，再重新执行 `remote.sh`。只要两边的 `connection.env` 还是同一份，端口就不会变。
 
-### 3.4 远程：验证并启动 Codex
+### 3.4 远程：验证并执行命令
 
 在远程服务器另开一个终端，进入同一个仓库目录：
 
@@ -441,6 +443,18 @@ chmod 600 connection.env
 ```bash
 ./remote.sh codex --help
 ```
+
+也可以执行其他命令或自定义 Bash 包装脚本，例如脚本内部设置并导出 `CODEX_HOME` 后再启动 Codex：
+
+```bash
+./remote.sh bash /你的路径/codex-wrapper.sh --help
+./remote.sh curl https://example.com
+./remote.sh -- test -n "hello"
+```
+
+命令和参数会原样传给 `exec`，包含空格的参数需要正常加引号。需要管道、重定向或 Shell 内置命令时，可以使用 `./remote.sh bash -c '你的命令'`。
+
+执行前会设置 `HTTP_PROXY`、`HTTPS_PROXY` 及其小写形式，设置 `NO_PROXY`、`no_proxy` 为 `localhost,127.0.0.1,::1`，并清除 `ALL_PROXY`、`all_proxy`。这些环境变量只影响指定命令及其子进程；命令本身需要支持代理环境变量。端口检查或出口 IP 检查失败时，不会执行命令。
 
 若远程 `remote.sh test` 失败，先确认本地 `local.sh` 和远程 `remote.sh` 都还在运行。出口 IP 检查只能证明代理链路可用，还要再发起一次真实 Codex 请求，确认能够访问 OpenAI 服务。
 
@@ -514,7 +528,7 @@ Dev Tunnels 中继把两端的端口转发通道接在一起。GOST 的用户名
 
 本指南针对 **Codex CLI**：
 
-- 代理变量仅传给脚本启动的 Codex 及其子进程，不修改全局 Shell 环境。
+- 代理变量仅传给脚本启动的命令（包括 Codex）及其子进程，不修改全局 Shell 环境。
 - `HTTPS_PROXY` 的值使用 `http://`。HTTPS 请求通过 HTTP CONNECT 转发。
 - 代理变量只作用于遵守这些环境变量的进程。
 
