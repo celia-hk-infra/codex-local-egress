@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
 set -euo pipefail
+CALLER_UMASK="$(umask)"
 umask 077
 
 DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -182,6 +183,7 @@ PY
 
     if [[ "$MODE" == command ]]; then
       verify_proxy >&2
+      umask "$CALLER_UMASK"
       exec "$@"
     else
       verify_proxy

@@ -46,6 +46,14 @@ class RemoteTests(unittest.TestCase):
         self.assertEqual(result.returncode, 0, result.stderr)
         self.assertIn('203.0.113.1', result.stdout)
 
+    def test_command_preserves_caller_umask(self):
+        for mask, expected in ((0o022, 0o644), (0o002, 0o664), (0o077, 0o600)):
+            with self.subTest(mask=mask):
+                target = self.work / f'created-{mask}'
+                result = self.run_remote('bash', '-c', 'touch "$1"', '_', str(target), umask=mask)
+                self.assertEqual(result.returncode, 0, result.stderr)
+                self.assertEqual(target.stat().st_mode & 0o777, expected)
+
     def test_failed_preflight_prevents_execution(self):
         for env, expected in (({'PROBE_STATUS': '1'}, 1), ({'CURL_STATUS': '22'}, 22)):
             with self.subTest(env=env):
