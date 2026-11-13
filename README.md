@@ -448,11 +448,15 @@ chmod 600 connection.env
 
 ```bash
 ./remote.sh bash /你的路径/codex-wrapper.sh --help
+./remote.sh /opt/tools/my-program arg1
+./remote.sh ./scripts/my-script.sh arg1
 ./remote.sh curl https://example.com
 ./remote.sh -- test -n "hello"
 ```
 
 命令和参数会原样传给 `exec`，包含空格的参数需要正常加引号。需要管道、重定向或 Shell 内置命令时，可以使用 `./remote.sh bash -c '你的命令'`。
+
+命令既可以由 `PATH` 查找，也可以使用绝对路径或相对路径。相对路径以运行 `remote.sh` 时所在的目录为准。直接执行脚本需要可执行权限和正确的 shebang；也可以通过 `bash`、`python3` 等解释器执行脚本。
 
 执行前会设置 `HTTP_PROXY`、`HTTPS_PROXY` 及其小写形式，设置 `NO_PROXY`、`no_proxy` 为 `localhost,127.0.0.1,::1`，并清除 `ALL_PROXY`、`all_proxy`。这些环境变量只影响指定命令及其子进程；命令本身需要支持代理环境变量。端口检查或出口 IP 检查失败时，不会执行命令。
 
