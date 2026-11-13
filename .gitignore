@@ -8,3 +8,8 @@ connection.env
 logs/
 .local.lock/
 .connect.lock/
+
+# Python diagnostic/test bytecode
+__pycache__/
+*.pyc
+.ipynb_checkpoints/
