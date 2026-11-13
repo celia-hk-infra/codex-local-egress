@@ -3,8 +3,10 @@ set -euo pipefail
 umask 077
 
 DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-CONFIG="$DIR/connection.env"
-LOGS="$DIR/logs"
+STATE="${EGRESS_STATE_DIR:-$DIR}"
+mkdir -p "$STATE"
+CONFIG="$STATE/connection.env"
+LOGS="$STATE/logs"
 
 require() {
   command -v "$1" >/dev/null || {
@@ -56,7 +58,7 @@ ensure_devtunnel_login "$(browser_or_device_code)"
 mkdir -p "$LOGS"
 chmod 700 "$LOGS"
 
-LOCK="$DIR/.local.lock"
+LOCK="$STATE/.local.lock"
 if ! mkdir "$LOCK" 2>/dev/null; then
   echo "已有本地服务，或异常退出留下了锁：$LOCK" >&2
   echo "确认没有 local.sh 仍在运行后，再删除此锁目录。" >&2

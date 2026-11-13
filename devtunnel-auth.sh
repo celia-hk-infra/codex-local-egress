@@ -11,7 +11,7 @@ fi
 if ! command -v devtunnel >/dev/null 2>&1 && [[ -x "$HOME/.local/bin/devtunnel" ]]; then
   export PATH="$HOME/.local/bin:$PATH"
 fi
-DEVTUNNEL_STATE="$DIR/.devtunnel"
+DEVTUNNEL_STATE="${EGRESS_STATE_DIR:-$DIR}/.devtunnel"
 
 chmod_devtunnel_state() {
   find "$DEVTUNNEL_STATE" -type d -exec chmod 700 {} +

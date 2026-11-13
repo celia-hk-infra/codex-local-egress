@@ -539,3 +539,15 @@ logs/devtunnel-host.log
 使用期间，本地个人电脑必须在线且不能休眠。
 
 工具参数及认证行为可参考：[GOST HTTP 代理说明](https://gost.run/en/tutorials/http-tunnel/)和 [Dev Tunnels CLI 参考](https://learn.microsoft.com/en-us/azure/developer/dev-tunnels/cli-commands)。CLI 仍在预览，参数可能变化，以该参考为准。
+
+### Integration interface
+
+Set `EGRESS_STATE_DIR` to keep connection data, tunnel login and locks outside
+this checkout. The default remains the checkout directory.
+
+- `remote.sh check`: bounded end-to-end proxy check; 0 means healthy.
+- `remote.sh exec -- /absolute/program args...`: check and execute with proxy variables.
+- `remote.sh claude`: convenience launcher, alongside `remote.sh codex`.
+- `remote.sh`: foreground tunnel connection; supervise it separately.
+
+Remote connection files are parsed as data, never evaluated as shell scripts.
