@@ -205,7 +205,8 @@ TUNNEL_ID=""
 if [[ -s "$CONFIG" ]]; then
   # 仅加载本脚本写出的连接配置。
   # shellcheck disable=SC1090
-  source "$CONFIG"
+  parsed=$(python3 "$DIR/connection.py" "$CONFIG") || exit 2
+  { IFS= read -r PROXY_PORT; IFS= read -r PROXY_AUTH; IFS= read -r TUNNEL_ID; } <<< "$parsed"
   if ! config_valid; then
     echo "connection.env 内容无效，没有启动：$CONFIG" >&2
     echo "要重新生成，先删除这个文件。" >&2
