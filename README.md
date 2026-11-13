@@ -110,7 +110,9 @@ GOST 使用 v3。
 bash install_dev_tunnel.sh
 ```
 
-脚本从 Microsoft 官方地址下载到 `~/.local/bin/devtunnel`，先验证 `--version` 再替换已有文件；下载或运行失败时保留原安装。`local.sh` / `remote.sh` 会在 PATH 没有 devtunnel 时自动查找此位置，无需修改 shell 配置。若缺少 ICU，脚本会提示参考第 2.4 节，不自动修改系统库。
+脚本从 Microsoft 官方地址下载，先验证 `--version` 再替换已有文件；下载或运行失败时保留原安装。若缺少 ICU，会自动查找当前 conda 环境、`conda info` 列出的 base 和其他环境、`~/.conda/environments.txt` 记录的环境，以及家目录、`/opt`、`/usr/local`、`/home` 下常见的 conda/miniconda 安装位置。逐一验证库目录，找到兼容的 ICU 后，把二进制安装到 `~/.local/bin/devtunnel.bin`，并生成 `~/.local/bin/devtunnel` 包装脚本。包装脚本只为 devtunnel 设置 `LD_LIBRARY_PATH`，新终端也能直接使用，无需激活 conda、安装系统包或手动 export。
+
+不需要额外 ICU 时，直接安装二进制到 `~/.local/bin/devtunnel`。`local.sh` / `remote.sh` 会在 PATH 没有 devtunnel 时自动查找此位置，无需修改 shell 配置。升级时重新运行安装脚本即可；自动查找失败时可指定 `ICU_LIB_DIR=/实际的环境/lib bash install_dev_tunnel.sh`，或参考第 2.4 节。包装脚本依赖选中的 conda 库目录；移除或移动该环境后，需要重新运行安装脚本。
 
 此脚本只安装 devtunnel，不安装 Codex 或 GOST，不自动登录，也不复制含密码的 `connection.env`。安装后复制自己的连接配置，再运行：
 
@@ -170,6 +172,8 @@ codex --version
 `devtunnel --version` 若报错 `Couldn't find a valid ICU package installed on the system`，先完成第 2.4 节，再重新检查。
 
 ### 2.4 远程服务器：devtunnel 缺少 ICU
+
+**优先直接运行 `bash install_dev_tunnel.sh`。** 安装脚本会自动尝试已有 conda/miniconda 的 ICU，并保存可用的库路径。也会尝试当前 `LD_LIBRARY_PATH` 中的目录，以及本节解压得到的 `~/.local/icu/usr/lib64`。以下步骤用于自动查找失败或手动安装；已由安装脚本生成包装脚本时，不要再执行下面的手动包装步骤。
 
 `devtunnel` 是 .NET 程序。系统里没有它能加载的 ICU 时，`devtunnel --version` 会失败，错误为：
 
